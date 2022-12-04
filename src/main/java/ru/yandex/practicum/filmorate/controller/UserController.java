@@ -51,7 +51,7 @@ public class UserController {
     }
 
     private User changeEmptyName(User user) {
-        if (user.getName().equals("") || user.getName().equals(null)) {
+        if (user.getName() == null || user.getName().equals("")) {
             user.setName(user.getLogin());
         }
         return user;
