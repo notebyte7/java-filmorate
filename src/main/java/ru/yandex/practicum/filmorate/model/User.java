@@ -12,7 +12,7 @@ public class User {
     @Email(message = "Должен быть email")
     private final String email;
     @Pattern(regexp = "\\S*", message = "Неверный формат")
-    @NotNull
+    @NotBlank
     private final String login;
     private String name;
     @PastOrPresent(message = "дата рождения не может быть в будущем")

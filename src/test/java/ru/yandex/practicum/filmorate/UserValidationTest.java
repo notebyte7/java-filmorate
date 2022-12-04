@@ -28,7 +28,7 @@ public class UserValidationTest {
         final User user = new User("", "login", "name", LocalDate.of(1990, 12, 01));
         Set<ConstraintViolation<User>> violation = validator.validate(user);
         System.out.println(violation);
-        assertEquals(2, violation.size());
+        assertEquals(1, violation.size());
     }
 
     @Test
@@ -36,7 +36,7 @@ public class UserValidationTest {
         final User user = new User("mail.ru", "login", "name", LocalDate.of(1990, 12, 01));
         Set<ConstraintViolation<User>> violation = validator.validate(user);
         System.out.println(violation);
-        assertEquals(2, violation.size());
+        assertEquals(1, violation.size());
     }
 
     @Test
@@ -73,7 +73,7 @@ public class UserValidationTest {
         final User user = new User("ya@mail.ru", "Login", "name", LocalDate.of(2030, 12, 01));
         Set<ConstraintViolation<User>> violation = validator.validate(user);
         System.out.println(violation);
-        assertEquals(2, violation.size());
+        assertEquals(1, violation.size());
     }
 
 
