@@ -6,25 +6,20 @@ import ru.yandex.practicum.filmorate.exception.UserNotFoundException;
 import ru.yandex.practicum.filmorate.model.User;
 
 import javax.validation.Valid;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Slf4j
 @RestController
 public class UserController {
     private int uid;
-    private Map<Integer, User> users = new HashMap<>();
+    private final Map<Integer, User> users = new HashMap<>();
 
     @PostMapping(value = "/users")
     public User create(@Valid @RequestBody User user) {
         log.debug("Получен запрос POST /users - создание User");
         int id = generateId();
         user.setId(id);
-        if (user.getName() == "" || user.getName() == null) {
-            user.setName(user.getLogin());
-        }
+        changeEmptyName(user);
         users.put(id, user);
         log.debug("Пользователь добавлен");
         return user;
@@ -35,9 +30,7 @@ public class UserController {
         log.debug("Получен запрос PUT /users - обновление User");
         int id = user.getId();
         if (users.containsKey(id)) {
-            if (user.getName() == "" || user.getName() == null) {
-                user.setName(user.getLogin());
-            }
+            changeEmptyName(user);
             users.put(id, user);
             log.debug("Пользователь обновлен");
         } else {
@@ -48,12 +41,19 @@ public class UserController {
     }
 
     @GetMapping(value = "/users")
-    public List<User> getUsers() {
+    public Collection<User> getUsers() {
         log.debug("Получен запрос GET /users - получить все User");
-        return new ArrayList<>(users.values());
+        return users.values();
     }
 
     private int generateId() {
         return ++uid;
+    }
+
+    private User changeEmptyName(User user) {
+        if (user.getName().equals("") || user.getName().equals(null)) {
+            user.setName(user.getLogin());
+        }
+        return user;
     }
 }

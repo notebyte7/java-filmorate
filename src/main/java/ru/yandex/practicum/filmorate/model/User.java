@@ -2,10 +2,7 @@ package ru.yandex.practicum.filmorate.model;
 
 import lombok.Data;
 
-import javax.validation.constraints.Email;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.PastOrPresent;
-import javax.validation.constraints.Pattern;
+import javax.validation.constraints.*;
 import java.time.LocalDate;
 
 @Data
@@ -14,7 +11,8 @@ public class User {
     @NotBlank
     @Email(message = "Должен быть email")
     private final String email;
-    @Pattern(regexp = "^[A-Za-z0-9]+$", message = "Неверный формат")
+    @Pattern(regexp = "\\S*", message = "Неверный формат")
+    @NotNull
     private final String login;
     private String name;
     @PastOrPresent(message = "дата рождения не может быть в будущем")

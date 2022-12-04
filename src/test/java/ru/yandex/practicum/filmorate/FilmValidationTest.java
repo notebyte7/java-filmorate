@@ -16,6 +16,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class FilmValidationTest {
+    private static final int FILM_DESCRIPTION_MAX_LENGTH = 200;
     private Validator validator;
 
     @BeforeEach
@@ -35,7 +36,7 @@ public class FilmValidationTest {
 
     @Test
     void filmDescription200Test() {
-        final Film film = new Film("Film1", "Lorem ipsum dolor sit amet, consectetuer adipiscing elit, sed diam nonummy nibh euismod tincidunt ut laoreet dolore magna aliquam erat volutpat. Ut wisi enim ad minim veniam, quis nostrud exerci tatio",
+        final Film film = new Film("Film1", "a".repeat(FILM_DESCRIPTION_MAX_LENGTH),
                 LocalDate.of(2022, 12, 01), 100);
         Set<ConstraintViolation<Film>> violation = validator.validate(film);
         System.out.println(violation);
@@ -44,7 +45,7 @@ public class FilmValidationTest {
 
     @Test
     void filmDescription201Test() {
-        final Film film = new Film("Film1", "ALorem ipsum dolor sit amet, consectetuer adipiscing elit, sed diam nonummy nibh euismod tincidunt ut laoreet dolore magna aliquam erat volutpat. Ut wisi enim ad minim veniam, quis nostrud exerci tatio",
+        final Film film = new Film("Film1",  "a".repeat(FILM_DESCRIPTION_MAX_LENGTH + 1),
                 LocalDate.of(2022, 12, 01), 100);
         Set<ConstraintViolation<Film>> violation = validator.validate(film);
         System.out.println(violation);
