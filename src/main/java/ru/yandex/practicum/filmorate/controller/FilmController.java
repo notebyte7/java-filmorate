@@ -15,7 +15,6 @@ import java.util.*;
 public class FilmController {
 
     private int uid;
-    private final LocalDate firstReleaseDate = LocalDate.of(1895,12,28);
     private final Map<Integer, Film> films = new HashMap<>();
 
     @PostMapping(value = "/films")
@@ -23,7 +22,6 @@ public class FilmController {
         log.debug("Получен запрос POST /films - создание Film");
         int id = generateId();
         film.setId(id);
-        validateReleaseDate(film);
         films.put(id, film);
         log.debug("Film добавлен в базу, текущее количество фильмов: {}", films.size());
         return film;
@@ -34,7 +32,6 @@ public class FilmController {
         log.debug("Получен запрос PUT /films - обновление Film");
         int id = film.getId();
         if (films.containsKey(id)) {
-            validateReleaseDate(film);
             films.put(id, film);
             log.debug("Film успешно обновлен, текущее количество фильмов: {}", films.size());
         } else {
@@ -52,12 +49,5 @@ public class FilmController {
 
     private int generateId() {
         return ++uid;
-    }
-
-    private void validateReleaseDate(Film film) {
-        if (film.getReleaseDate().isBefore(firstReleaseDate)) {
-            log.debug("Ошибка валидации releaseDate");
-            throw new ValidationException();
-        }
     }
 }

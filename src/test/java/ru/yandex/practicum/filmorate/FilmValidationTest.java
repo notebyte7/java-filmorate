@@ -54,12 +54,11 @@ public class FilmValidationTest {
 
     @Test
     void nonCorrectReleaseDate() {
-        FilmController controller = new FilmController();
         final Film film = new Film("Film1", "Description film 1",
                 LocalDate.of(1895, 12, 27), 100);
-        assertThrows(ValidationException.class, () -> {
-            controller.create(film);
-        });
+        Set<ConstraintViolation<Film>> violation = validator.validate(film);
+        System.out.println(violation);
+        assertEquals(1, violation.size());
     }
 
     @Test

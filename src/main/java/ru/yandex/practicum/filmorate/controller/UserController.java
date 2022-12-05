@@ -50,10 +50,9 @@ public class UserController {
         return ++uid;
     }
 
-    private User changeEmptyName(User user) {
+    private void changeEmptyName(User user) {
         if (user.getName() == null || user.getName().equals("")) {
             user.setName(user.getLogin());
         }
-        return user;
     }
 }
