@@ -21,10 +21,12 @@ public class UserService {
     }
 
     public User create(User user) {
+        changeEmptyName(user);
         return userStorage.create(user);
     }
 
     public User update(User user) {
+        changeEmptyName(user);
         return userStorage.update(user);
     }
 
@@ -36,12 +38,18 @@ public class UserService {
         return userStorage.getUserById(id);
     }
 
+    private void changeEmptyName(User user) {
+        if (user.getName() == null || user.getName().equals("")) {
+            user.setName(user.getLogin());
+        }
+    }
+
     public void addFriend(int id, int friendId) {
         User user = getUserById(id);
         User friend = getUserById(friendId);
         if (user != null && friend != null) {
-            user.getFriends().add(friendId);
-            friend.getFriends().add(id);
+            user.getFriendIds().add(friendId);
+            friend.getFriendIds().add(id);
             userStorage.update(user);
             userStorage.update(friend);
         }
@@ -51,15 +59,15 @@ public class UserService {
         User user = getUserById(id);
         User friend = getUserById(friendId);
         if (user != null && friend != null) {
-            user.getFriends().remove(friendId);
-            friend.getFriends().remove(id);
+            user.getFriendIds().remove(friendId);
+            friend.getFriendIds().remove(id);
             userStorage.update(user);
             userStorage.update(friend);
         }
     }
 
     public Collection<User> getFriends(int id) {
-        return getUserById(id).getFriends().stream()
+        return getUserById(id).getFriendIds().stream()
                 .map(i -> getUserById(i))
                 .collect(Collectors.toList());
     }
@@ -68,8 +76,8 @@ public class UserService {
         User user = getUserById(id);
         User other = getUserById(otherId);
         if (user != null && other != null) {
-            Set<Integer> intersection = new HashSet<>(user.getFriends());
-            Set<Integer> secondSet = new HashSet<>(other.getFriends());
+            Set<Integer> intersection = new HashSet<>(user.getFriendIds());
+            Set<Integer> secondSet = new HashSet<>(other.getFriendIds());
             intersection.retainAll(secondSet);
             return intersection.stream()
                     .map(i -> getUserById(i))

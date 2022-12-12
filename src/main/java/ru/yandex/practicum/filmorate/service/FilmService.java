@@ -1,16 +1,13 @@
 package ru.yandex.practicum.filmorate.service;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import ru.yandex.practicum.filmorate.exception.FilmException;
 import ru.yandex.practicum.filmorate.exception.UserNotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.stream.Collectors;
 
 @Service
@@ -41,7 +38,7 @@ public class FilmService {
     public void addLike(int id, int userId) {
         Film film = getFilmById(id);
         if (film != null && userId > 0) {
-            film.getLikes().add(userId);
+            film.getWhoLikedUserIds().add(userId);
             filmStorage.update(film);
         } else {
             throw new UserNotFoundException("Пользователя с таким id не существует");
@@ -51,8 +48,8 @@ public class FilmService {
     public void removeLike(int id, int userId) {
         Film film = getFilmById(id);
         if (film != null) {
-            if (film.getLikes().contains(userId)) {
-                film.getLikes().remove(userId);
+            if (film.getWhoLikedUserIds().contains(userId)) {
+                film.getWhoLikedUserIds().remove(userId);
                 filmStorage.update(film);
             } else {
                 throw new FilmException("Like на фильм " + id + " от пользователя " + userId + " не найден");
@@ -67,6 +64,6 @@ public class FilmService {
     }
 
     private int compare(Film f1, Film f2) {
-        return f2.getLikes().size() - f1.getLikes().size();
+        return f2.getWhoLikedUserIds().size() - f1.getWhoLikedUserIds().size();
     }
 }

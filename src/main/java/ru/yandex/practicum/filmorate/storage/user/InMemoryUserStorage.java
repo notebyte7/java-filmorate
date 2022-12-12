@@ -16,19 +16,19 @@ public class InMemoryUserStorage implements UserStorage {
     private int uid;
     private final Map<Integer, User> users = new HashMap<>();
 
+    @Override
     public User create(User user) {
         int id = generateId();
         user.setId(id);
-        changeEmptyName(user);
         users.put(id, user);
         log.debug("Пользователь добавлен");
         return user;
     }
 
+    @Override
     public User update(User user) {
         int id = user.getId();
         if (users.containsKey(id)) {
-            changeEmptyName(user);
             users.put(id, user);
             log.debug("Пользователь обновлен");
         } else {
@@ -38,6 +38,7 @@ public class InMemoryUserStorage implements UserStorage {
         return user;
     }
 
+    @Override
     public Collection<User> getUsers() {
         return users.values();
     }
@@ -53,11 +54,5 @@ public class InMemoryUserStorage implements UserStorage {
 
     private int generateId() {
         return ++uid;
-    }
-
-    private void changeEmptyName(User user) {
-        if (user.getName() == null || user.getName().equals("")) {
-            user.setName(user.getLogin());
-        }
     }
 }
