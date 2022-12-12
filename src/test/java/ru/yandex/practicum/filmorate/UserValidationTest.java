@@ -62,10 +62,6 @@ public class UserValidationTest {
         System.out.println(violation);
         System.out.println(user);
         assertEquals(0, violation.size());
-        UserController controller = new UserController();
-        controller.create(user);
-        assertEquals(user.getLogin(), controller.getUsers().iterator().next().getName(),
-                "Замена name на login не состоялась");
     }
 
     @Test
