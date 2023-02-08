@@ -9,6 +9,7 @@ import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Repository;
+import ru.yandex.practicum.filmorate.exception.FilmNotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.model.MPA;
@@ -55,6 +56,14 @@ public class FilmDbStorage implements FilmStorage {
         }, keyHolder);
         film.setId(keyHolder.getKey().intValue());
 
+        setGenres(film);
+        log.debug("Film добавлен в базу, текущее количество фильмов: {}", films.size());
+        return film;
+    }
+
+    private void setGenres(Film film) {
+        String sql = "DELETE FROM PUBLIC.GENRES WHERE FILM_ID = ?";
+        jdbcTemplate.update(sql, film.getId());
         if (film.getGenres() != null) {
             for (Genre genre:film.getGenres()){
                 String sqlQuery = "INSERT INTO PUBLIC.GENRES " +
@@ -63,8 +72,6 @@ public class FilmDbStorage implements FilmStorage {
                 jdbcTemplate.update(sqlQuery, film.getId(), genre.getId());
             }
         }
-        log.debug("Film добавлен в базу, текущее количество фильмов: {}", films.size());
-        return film;
     }
 
     @Override
@@ -73,13 +80,19 @@ public class FilmDbStorage implements FilmStorage {
         String sqlQuery = "UPDATE PUBLIC.FILMS " +
                 "SET NAME= ?, DESCRIPTION= ?, RELEASE_DATE= ?, DURATION= ?, RATING= ? " +
                 "WHERE ID= ?";
-        jdbcTemplate.update(sqlQuery, film.getName(), film.getDescription(), film.getReleaseDate(), film.getDuration(),
-                film.getMpa(), film.getId());
-        return film;
+        int updateStatus = jdbcTemplate.update(sqlQuery, film.getName(), film.getDescription(), film.getReleaseDate(), film.getDuration(),
+                film.getMpa().getId(), film.getId());
+        if (updateStatus != 0) {
+            setGenres(film);
+            return film;
+        } else {
+            throw new FilmNotFoundException("Фильм для обновления не найден");
+        }
     }
     @Override
     public Collection<Film> getFilms() {
-        String sqlQuery = "SELECT f.ID, f.NAME, f.DESCRIPTION, f.RELEASE_DATE, f.DURATION, m.NAME AS Rating\n" +
+        String sqlQuery = "SELECT f.ID, f.NAME, f.DESCRIPTION, f.RELEASE_DATE, f.DURATION, m.ID AS mpa_id, " +
+                "m.NAME AS mpa_name\n" +
                 "FROM FILMS AS f\n" +
                 "LEFT JOIN mpa AS m ON m.ID = f.RATING";
         return jdbcTemplate.query(sqlQuery, (rs, rowNum) -> makeFilm(rs));
@@ -91,19 +104,20 @@ public class FilmDbStorage implements FilmStorage {
         String description = rs.getString("description");
         LocalDate releaseDate = rs.getDate("release_date").toLocalDate();
         Integer duration = rs.getInt("duration");
-        MPA mpa = rs.getObject("rating", MPA.class);
-        List<Genre> genres = getGenresById(rs.getInt("id"));
+        MPA mpa = new MPA(rs.getInt("mpa_id"), rs.getString("mpa_name"));
+        List<Genre> genres = getGenresById(id);
         return new Film(id, name, description, releaseDate, duration, genres, mpa);
     }
 
     private List<Genre> getGenresById(Integer id) {
-        SqlRowSet filmGenreRows = jdbcTemplate.queryForRowSet("SELECT g.ID \n" +
-                "FROM GENRES gs\n" +
-                "LEFT JOIN GENRE AS g ON gs.GENRE_ID = g.ID  \n" +
-                "WHERE FILM_ID = ?");
+        SqlRowSet filmGenreRows = jdbcTemplate.queryForRowSet(
+                "SELECT ID, NAME FROM GENRE g " +
+                "WHERE ID IN (SELECT GENRE_ID " +
+                "FROM GENRES g " +
+                "WHERE FILM_ID = ?)", id);
         List<Genre> genres = new ArrayList<>();
         while (filmGenreRows.next()) {
-            Genre genre = filmGenreRows.getObject("name", Genre.class);
+            Genre genre = new Genre(filmGenreRows.getInt(1), filmGenreRows.getString(2));
             genres.add(genre);
         }
         return genres;
@@ -111,29 +125,23 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public Film getFilmById(int id) {
-        SqlRowSet filmRows = jdbcTemplate.queryForRowSet("SELECT * FROM films WHERE id = ?", id);
-        SqlRowSet filmGenreRows = jdbcTemplate.queryForRowSet("SELECT NAME FROM GENRE g " +
-                "WHERE ID IN (SELECT GENRE_ID " +
-                "FROM GENRES g " +
-                "WHERE FILM_ID = ?)", id);
-
-        List<Genre> genres = new ArrayList<>();
-        while (filmGenreRows.next()) {
-            Genre genre = filmGenreRows.getObject("name", Genre.class);
-            genres.add(genre);
-        }
+        SqlRowSet filmRows = jdbcTemplate.queryForRowSet("SELECT f.ID, f.NAME, f.DESCRIPTION, f.RELEASE_DATE, " +
+                "f.DURATION, m.ID, m.NAME " +
+                "FROM FILMS AS f " +
+                "LEFT JOIN mpa AS m ON m.ID = f.RATING WHERE f.id = ?", id);
 
         if (filmRows.next()) {
-            Film film = new Film(filmRows.getInt("id"), filmRows.getString("name"),
+            Film film = new Film(filmRows.getInt("id"),
+                    filmRows.getString("name"),
                     filmRows.getString("description"),
                     filmRows.getDate("release_date").toLocalDate(),
                     filmRows.getInt("duration"),
-                    genres,
-                    filmRows.getObject("rating", MPA.class));
+                    getGenresById(id),
+                    new MPA(filmRows.getInt(6), filmRows.getString(7)));
             return film;
         } else {
             log.info("Фильм с идентификатором {} не найден.", id);
-            return null;
+             throw new FilmNotFoundException("Фильм с идентификатором не найден.");
         }
     }
 }
