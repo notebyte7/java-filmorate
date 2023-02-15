@@ -4,13 +4,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.FilmException;
-import ru.yandex.practicum.filmorate.exception.UserNotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.Genre;
+import ru.yandex.practicum.filmorate.model.MPA;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 
 import java.util.Collection;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -40,32 +39,38 @@ public class FilmService {
     public void addLike(int id, int userId) {
         Film film = getFilmById(id);
         if (film != null && userId > 0) {
-            film.getWhoLikedUserIds().add(userId);
-            filmStorage.update(film);
+            filmStorage.addLike(id, userId);
         } else {
-            throw new UserNotFoundException("Пользователя с таким id не существует");
+            throw new FilmException("Неправильные данные для ввода");
         }
     }
 
     public void removeLike(int id, int userId) {
         Film film = getFilmById(id);
-        if (film != null) {
-            if (film.getWhoLikedUserIds().contains(userId)) {
-                film.getWhoLikedUserIds().remove(userId);
-                filmStorage.update(film);
-            } else {
-                throw new FilmException("Like на фильм " + id + " от пользователя " + userId + " не найден");
-            }
+        if (film != null && userId > 0) {
+                filmStorage.removeLike(id, userId);
+        } else {
+            throw new FilmException("Неправильные данные для ввода");
         }
     }
 
     public Collection<Film> getPopularFilms(int count) {
-        return filmStorage.getFilms().stream().sorted(this::compare)
-                .limit(count)
-                .collect(Collectors.toList());
+        return filmStorage.getPopularFilms(count);
     }
 
-    private int compare(Film f1, Film f2) {
-        return f2.getWhoLikedUserIds().size() - f1.getWhoLikedUserIds().size();
+    public Collection<Genre> getGenres() {
+        return filmStorage.getGenres();
+    }
+
+    public Genre getGenreById(int id) {
+        return filmStorage.getGenreById(id);
+    }
+
+    public Collection<MPA> getMpa() {
+        return filmStorage.getMpa();
+    }
+
+    public MPA getMpaById(int id) {
+        return filmStorage.getMpaById(id);
     }
 }

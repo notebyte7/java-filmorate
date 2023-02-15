@@ -5,9 +5,8 @@ import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.UserNotFoundException;
 import ru.yandex.practicum.filmorate.model.User;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -44,12 +43,42 @@ public class InMemoryUserStorage implements UserStorage {
     }
 
     @Override
-    public User getUserById(int id) {
+    public Optional<User> getUserById(int id) {
         if (users.containsKey(id)) {
-            return users.get(id);
+            return Optional.of(users.get(id));
         } else {
             throw new UserNotFoundException("Пользователь с " + id + " не найден");
         }
+    }
+
+    @Override
+    public void addFriend(int userId, int friendId) {
+        getUserById(userId).get().getFriendIds().add(friendId);
+        getUserById(friendId).get().getFriendIds().add(userId);
+    }
+
+    public void removeFriend(int userId, int friendId) {
+        getUserById(userId).get().getFriendIds().add(friendId);
+        getUserById(friendId).get().getFriendIds().add(userId);
+    }
+
+    @Override
+    public List<User> getFriends(int id) {
+        return getUserById(id).get().getFriendIds().stream()
+                .map(i -> getUserById(i).get())
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public Collection<User> commonFriends(int id, int otherId) {
+        User user = getUserById(id).get();
+        User other = getUserById(otherId).get();
+        Set<Integer> intersection = new HashSet<>(user.getFriendIds());
+        Set<Integer> secondSet = new HashSet<>(other.getFriendIds());
+        intersection.retainAll(secondSet);
+        return intersection.stream()
+                .map(i -> getUserById(i).get())
+                .collect(Collectors.toList());
     }
 
     private int generateId() {

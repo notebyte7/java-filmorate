@@ -4,10 +4,8 @@ import lombok.Data;
 import ru.yandex.practicum.filmorate.validation.ReleaseDateValidation;
 
 import javax.validation.constraints.*;
-import java.sql.Date;
 import java.time.LocalDate;
-import java.util.HashSet;
-import java.util.List;
+import java.util.Collection;
 import java.util.Set;
 
 @Data
@@ -22,12 +20,12 @@ public class Film {
     private final LocalDate releaseDate;
     @Positive(message = "Продолжительность фильма должна быть положительной")
     private final int duration;
-    private final List<Genre> genres;
-    private final MPA mpa;
-    private Set<Integer> whoLikedUserIds = new HashSet<>();
+    private Collection<Genre> genres;
+    private MPA mpa;
+    private Set<Integer> whoLikedUserIds;
 
-    public Film(int id, String name, String description, LocalDate releaseDate, int duration, List<Genre> genres,
-                MPA mpa) {
+    public Film(int id, String name, String description, LocalDate releaseDate, int duration, Collection<Genre> genres,
+                MPA mpa, Set<Integer> whoLikedUserIds) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -35,5 +33,6 @@ public class Film {
         this.duration = duration;
         this.genres = genres;
         this.mpa = mpa;
+        this.whoLikedUserIds = whoLikedUserIds;
     }
 }

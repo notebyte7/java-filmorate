@@ -50,6 +50,7 @@ create table if not exists GENRES
 (
     FILM_ID  INTEGER not null,
     GENRE_ID INTEGER not null,
+    constraint GENRES_PK primary key (FILM_ID, GENRE_ID),
     constraint "GENRES_GENRE_ID_fk"
         foreign key (GENRE_ID) references GENRE,
     constraint "genres_FILMS_ID_fk"
