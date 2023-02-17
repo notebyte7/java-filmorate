@@ -54,10 +54,10 @@ class FilmoRateApplicationTests {
     @Test
     public void testCreateAndUpdateUser() {
         User user = userStorage.create(user0);
-        User getUser = userStorage.getUserById(user.getId()).get();
+        User getUser = userStorage.getUserById(user.getId());
         assertEquals(user, getUser, "пользователи не совпадают");
         User userUpd = userStorage.update(user1upd);
-        User getUserUpd = userStorage.getUserById(user.getId()).get();
+        User getUserUpd = userStorage.getUserById(user.getId());
         assertEquals(userUpd, getUserUpd, "пользователи не совпадают");
     }
 
@@ -73,13 +73,8 @@ class FilmoRateApplicationTests {
     @Test
     public void testGetUserById() {
         User user1 = userStorage.create(user0);
-        Optional<User> userOptional = userStorage.getUserById(1);
-
-        assertThat(userOptional)
-                .isPresent()
-                .hasValueSatisfying(user ->
-                        assertThat(user).hasFieldOrPropertyWithValue("id", 1)
-                );
+        User newUser = userStorage.getUserById(1);
+        assertEquals(user1, newUser, "пользователи не совпадают");
     }
 
     @Test
@@ -90,11 +85,11 @@ class FilmoRateApplicationTests {
         Set<Integer> testFriendIds = new HashSet<>();
         testFriendIds.add(2);
 
-        User getUser = userStorage.getUserById(1).get();
+        User getUser = userStorage.getUserById(1);
         assertEquals(getUser.getFriendIds(), testFriendIds, "списки не совпадают");
 
         userStorage.removeFriend(1, 2);
-        getUser = userStorage.getUserById(1).get();
+        getUser = userStorage.getUserById(1);
         testFriendIds.remove(2);
         assertEquals(getUser.getFriendIds(), testFriendIds, "списки не совпадают");
     }

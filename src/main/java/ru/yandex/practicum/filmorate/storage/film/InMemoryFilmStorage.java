@@ -2,7 +2,7 @@ package ru.yandex.practicum.filmorate.storage.film;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import ru.yandex.practicum.filmorate.exception.FilmNotFoundException;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.model.MPA;
@@ -36,7 +36,7 @@ public class InMemoryFilmStorage implements FilmStorage {
             log.debug("Film успешно обновлен, текущее количество фильмов: {}", films.size());
         } else {
             log.debug("Фильм для обновления не найден");
-            throw new FilmNotFoundException("Фильм для обновления не найден");
+            throw new NotFoundException("Фильм для обновления не найден");
         }
         return film;
     }
@@ -51,7 +51,7 @@ public class InMemoryFilmStorage implements FilmStorage {
         if (films.containsKey(id)) {
             return films.get(id);
         } else {
-            throw new FilmNotFoundException("Фильм с " + id + " не найден");
+            throw new NotFoundException("Фильм с " + id + " не найден");
         }
     }
 
@@ -78,11 +78,6 @@ public class InMemoryFilmStorage implements FilmStorage {
 
     @Override
     public Collection<Genre> getGenres() {
-        return null;
-    }
-
-    @Override
-    public Collection<Genre> getFilmGenresById(int id) {
         return null;
     }
 

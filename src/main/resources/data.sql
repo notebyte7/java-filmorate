@@ -1,19 +1,19 @@
-INSERT INTO GENRE (id, name)
+INSERT INTO GENRES (id, name)
 VALUES (1, 'Комедия');
 
-INSERT INTO GENRE (id, name)
+INSERT INTO GENRES (id, name)
 VALUES (2, 'Драма');
 
-INSERT INTO GENRE (id, name)
+INSERT INTO GENRES (id, name)
 VALUES (3, 'Мультфильм');
 
-INSERT INTO GENRE (id, name)
+INSERT INTO GENRES (id, name)
 VALUES (4, 'Триллер');
 
-INSERT INTO GENRE (id, name)
+INSERT INTO GENRES (id, name)
 VALUES (5, 'Документальный');
 
-INSERT INTO GENRE (id, name)
+INSERT INTO GENRES (id, name)
 VALUES (6, 'Боевик');
 
 INSERT INTO MPA (id, name)

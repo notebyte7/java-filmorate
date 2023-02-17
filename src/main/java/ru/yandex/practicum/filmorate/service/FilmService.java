@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.FilmException;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.model.MPA;
@@ -25,7 +26,11 @@ public class FilmService {
     }
 
     public Film update(Film film) {
-        return filmStorage.update(film);
+            Film newFilm =  filmStorage.update(film);
+        if (newFilm != null) {
+            return newFilm;
+        }
+        throw new NotFoundException("Фильм с таким id не существует");
     }
 
     public Collection<Film> getFilms() {
@@ -33,7 +38,12 @@ public class FilmService {
     }
 
     public Film getFilmById(int id) {
-        return filmStorage.getFilmById(id);
+        Film newFilm = filmStorage.getFilmById(id);
+        if (newFilm != null) {
+            return newFilm;
+        } else {
+            throw new NotFoundException("Фильм не существует");
+        }
     }
 
     public void addLike(int id, int userId) {
@@ -63,7 +73,13 @@ public class FilmService {
     }
 
     public Genre getGenreById(int id) {
-        return filmStorage.getGenreById(id);
+        Genre genre = filmStorage.getGenreById(id);
+        if (genre != null) {
+            return genre;
+        } else {
+            throw new NotFoundException("Такого жанра не существует");
+        }
+
     }
 
     public Collection<MPA> getMpa() {
@@ -71,6 +87,11 @@ public class FilmService {
     }
 
     public MPA getMpaById(int id) {
-        return filmStorage.getMpaById(id);
+        MPA mpa = filmStorage.getMpaById(id);
+        if (mpa != null) {
+            return mpa;
+        } else {
+            throw new NotFoundException("Такого MPA не существует");
+        }
     }
 }

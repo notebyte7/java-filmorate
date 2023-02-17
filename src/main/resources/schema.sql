@@ -1,10 +1,10 @@
 drop table if exists FILM_LIKES;
 
-drop table if exists GENRES;
+drop table if exists FILM_GENRES;
 
 drop table if exists FILMS;
 
-drop table if exists GENRE;
+drop table if exists GENRES;
 
 drop table if exists MPA;
 
@@ -38,22 +38,21 @@ create table if not exists FILMS
         foreign key (RATING) references MPA
 );
 
-create table if not exists GENRE
+create table if not exists GENRES
 (
     ID   INTEGER               not null,
     NAME VARCHAR not null,
-    constraint GENRE_PK
+    constraint GENRES_PK
         primary key (ID)
 );
 
-create table if not exists GENRES
+create table if not exists FILM_GENRES
 (
     FILM_ID  INTEGER not null,
     GENRE_ID INTEGER not null,
-    constraint GENRES_PK primary key (FILM_ID, GENRE_ID),
-    constraint "GENRES_GENRE_ID_fk"
-        foreign key (GENRE_ID) references GENRE,
-    constraint "genres_FILMS_ID_fk"
+    constraint "FILM_GENRES_GENRE_ID_fk"
+        foreign key (GENRE_ID) references GENRES,
+    constraint "FILM_GENRES_FILMS_ID_fk"
         foreign key (FILM_ID) references FILMS
 );
 
@@ -72,6 +71,8 @@ create table if not exists FILM_LIKES
 (
     FILM_ID INTEGER not null,
     USER_ID INTEGER not null,
+    constraint "FILM_LIKES_pk"
+        primary key (FILM_ID, USER_ID),
     constraint "FILM_LIKES_USERS_ID_fk"
         foreign key (USER_ID) references USERS,
     constraint "film_likes_FILMS_ID_fk"
@@ -84,6 +85,8 @@ create table if not exists USER_FRIENDS
     FRIEND_ID    INTEGER not null,
     CONFIRMATION BOOLEAN,
     constraint "user_friends_USERS_ID_fk"
-        foreign key (USER_ID) references USERS
+        foreign key (USER_ID) references USERS,
+    constraint "user_friends_FRIENDS_ID_fk"
+        foreign key (FRIEND_ID) references USERS
 );
 

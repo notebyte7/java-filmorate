@@ -9,8 +9,6 @@ import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Repository;
-import ru.yandex.practicum.filmorate.exception.FilmException;
-import ru.yandex.practicum.filmorate.exception.FilmNotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.model.MPA;
@@ -60,17 +58,23 @@ public class FilmDbStorage implements FilmStorage {
         return film;
     }
 
-    private void updateGenres(Film film) {
-        String sql = "DELETE FROM PUBLIC.GENRES WHERE FILM_ID = ?";
+    private Collection<Genre> updateGenres(Film film) {
+        String sql = "DELETE FROM PUBLIC.FILM_GENRES WHERE FILM_ID = ?";
         jdbcTemplate.update(sql, film.getId());
+
+        //Любой другой вариант, если в Film использовать Set<Genre> вызовет потерю порядка значений, остается только
+        //переупаковывать Collection в Set для удаление дублией. Это нужно не для добавления в таблицу, а для
+        //возвращения списка Genre
+        Set<Genre> genres = new LinkedHashSet<>();
         if (film.getGenres() != null) {
-            for (Genre genre : film.getGenres()) {
-                String sqlQuery = "MERGE INTO PUBLIC.GENRES " +
-                        "(FILM_ID, GENRE_ID) KEY (FILM_ID, GENRE_ID) " +
+            genres = new LinkedHashSet<>(film.getGenres());
+            for (Genre genre : genres) {
+                String sqlQuery = "INSERT INTO PUBLIC.FILM_GENRES " +
+                        "(FILM_ID, GENRE_ID) " +
                         "VALUES (?, ?) ";
                 jdbcTemplate.update(sqlQuery, film.getId(), genre.getId());
             }
-        }
+        } return genres;
     }
 
     @Override
@@ -80,16 +84,12 @@ public class FilmDbStorage implements FilmStorage {
                 "SET NAME= ?, DESCRIPTION= ?, RELEASE_DATE= ?, DURATION= ?, RATING= ? " +
                 "WHERE ID= ?";
         int updateStatus = jdbcTemplate.update(sqlQuery, film.getName(), film.getDescription(), film.getReleaseDate(), film.getDuration(),
-                film.getMpa().getId(), film.getId());
-        if (film.getGenres() != null) {
-            Set<Genre> genreSet = new LinkedHashSet<>(film.getGenres());
-            film.setGenres(genreSet);
-        }
+                film.getMpa().getId(), id);
         if (updateStatus != 0) {
-            updateGenres(film);
+            film.setGenres(updateGenres(film));
             return film;
         } else {
-            throw new FilmNotFoundException("Фильм для обновления не найден");
+            return null;
         }
     }
 
@@ -109,7 +109,7 @@ public class FilmDbStorage implements FilmStorage {
         LocalDate releaseDate = rs.getDate("release_date").toLocalDate();
         Integer duration = rs.getInt("duration");
         MPA mpa = new MPA(rs.getInt("mpa_id"), rs.getString("mpa_name"));
-        Collection<Genre> genres = getFilmGenresById(id);
+        Set<Genre> genres = getFilmGenresById(id);
         return new Film(id, name, description, releaseDate, duration, genres, mpa, getFilmLikes(id));
     }
 
@@ -123,25 +123,27 @@ public class FilmDbStorage implements FilmStorage {
         return whoLikedUserIds;
     }
 
-    public Collection<Genre> getFilmGenresById(int id) {
+    private Set<Genre> getFilmGenresById(int id) {
         SqlRowSet filmRows = jdbcTemplate.queryForRowSet("SELECT * " +
                 "FROM FILMS AS f " +
                 "WHERE f.id = ?", id);
 
         if (filmRows.next()) {
             SqlRowSet filmGenreRows = jdbcTemplate.queryForRowSet(
-                    "SELECT ID, NAME FROM GENRE g " +
+                    "SELECT ID, NAME FROM GENRES g " +
                             "WHERE ID IN (SELECT GENRE_ID " +
-                            "FROM GENRES g " +
+                            "FROM FILM_GENRES g " +
                             "WHERE FILM_ID = ?)", id);
-            Collection<Genre> genres = new HashSet<>();
+            Set<Genre> genres = new LinkedHashSet<>();
             while (filmGenreRows.next()) {
                 Genre genre = new Genre(filmGenreRows.getInt(1), filmGenreRows.getString(2));
-                genres.add(genre);
+                if (!genres.contains(genre)) {
+                    genres.add(genre);
+                }
             }
             return genres;
         } else {
-            throw new FilmNotFoundException("Фильма с id " + id + " не сущесутвует");
+            return null;
         }
     }
 
@@ -163,8 +165,7 @@ public class FilmDbStorage implements FilmStorage {
                     getFilmLikes(id));
             return film;
         } else {
-            log.info("Фильм с идентификатором {} не найден.", id);
-            throw new FilmNotFoundException("Фильм с идентификатором не найден.");
+            return null;
         }
     }
 
@@ -207,7 +208,7 @@ public class FilmDbStorage implements FilmStorage {
     @Override
     public Collection<Genre> getGenres() {
         SqlRowSet GenreRows = jdbcTemplate.queryForRowSet("SELECT * " +
-                "FROM GENRE ");
+                "FROM GENRES ");
         Collection<Genre> genres = new ArrayList<>();
         while (GenreRows.next()) {
             Genre genre = new Genre(GenreRows.getInt(1), GenreRows.getString(2));
@@ -219,13 +220,13 @@ public class FilmDbStorage implements FilmStorage {
     @Override
     public Genre getGenreById(int id) {
         SqlRowSet GenreRows = jdbcTemplate.queryForRowSet("SELECT * " +
-                "FROM GENRE " +
+                "FROM GENRES " +
                 "WHERE ID = ?", id);
         if (GenreRows.next()) {
             Genre genre = new Genre(GenreRows.getInt(1), GenreRows.getString(2));
             return genre;
         } else {
-            throw new FilmException("Нет такого жанра");
+            return null;
         }
     }
 
@@ -250,9 +251,7 @@ public class FilmDbStorage implements FilmStorage {
             MPA mpa = new MPA(MpaRows.getInt(1), MpaRows.getString(2));
             return mpa;
         } else {
-            throw new FilmException("Нет MPA для фильма id = " + id);
+            return null;
         }
     }
-
-
 }
