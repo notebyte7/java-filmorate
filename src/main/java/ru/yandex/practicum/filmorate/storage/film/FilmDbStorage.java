@@ -63,6 +63,9 @@ public class FilmDbStorage implements FilmStorage {
         Set<Genre> genres = new LinkedHashSet<>();
         if (film.getGenres() != null) {
             genres = new LinkedHashSet<>(film.getGenres());
+            //Любой другой вариант, если в Film использовать Set вызовет потерю порядка значений,
+            // остается только переупаковывать Collection в Set для удаление дублией.
+            // Это нужно не для добавления в таблицу, а для возвращения списка Genre
             for (Genre genre : genres) {
                 String sqlQuery = "INSERT INTO PUBLIC.FILM_GENRES " +
                         "(FILM_ID, GENRE_ID) " +
