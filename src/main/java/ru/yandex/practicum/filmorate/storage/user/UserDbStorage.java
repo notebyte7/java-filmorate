@@ -8,7 +8,6 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.stereotype.Component;
-import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.*;
 
 import java.sql.*;
@@ -67,33 +66,37 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public Collection<User> getUsers() {
-        String sqlQuery = "SELECT * " +
-                "FROM USERS AS u ";
-        return jdbcTemplate.query(sqlQuery, (rs, rowNum) -> makeUser(rs));
+        Map<Integer, Set<Integer>> allFriends = getFriendIds();
+        return jdbcTemplate.query("SELECT * " +
+                "FROM USERS AS u ", (rs, rowNum) -> makeUser(rs, allFriends));
     }
 
-    private User makeUser(ResultSet rs) throws SQLException {
+    private User makeUser(ResultSet rs, Map<Integer, Set<Integer>> allFriends) throws SQLException {
         Integer id = rs.getInt("id");
         String email = rs.getString("email");
         String login = rs.getString("login");
         String name = rs.getString("name");
         LocalDate birthday = rs.getDate("birthday").toLocalDate();
-        Set<Integer> friendIds = getFriendIds(id);
+        Set<Integer> friendIds = allFriends.get(id);
         return new User(id, email, login, name, birthday, friendIds);
     }
 
-    private Set<Integer> getFriendIds(int id) {
-        Set<Integer> friendIds = new HashSet<>();
-        SqlRowSet friendsRow = jdbcTemplate.queryForRowSet("SELECT FRIEND_ID FROM USER_FRIENDS uf " +
-                "WHERE USER_ID  = ?", id);
-        while (friendsRow.next()) {
-            friendIds.add(friendsRow.getInt(1));
+    private Map<Integer, Set<Integer>> getFriendIds() {
+        Map<Integer, Set<Integer>> allFriends = new LinkedHashMap<>();
+        SqlRowSet rs = jdbcTemplate.queryForRowSet("SELECT * " +
+                "FROM USER_FRIENDS uf ");
+        while (rs.next()) {
+            Integer id = rs.getInt(1);
+            allFriends.putIfAbsent(id, new LinkedHashSet<>());
+            Integer friend = rs.getInt(2);
+            allFriends.get(id).add(friend);
         }
-        return friendIds;
+        return allFriends;
     }
 
     @Override
     public User getUserById(int id) {
+        Map<Integer, Set<Integer>> allFriends = getFriendIds();
         SqlRowSet userRows = jdbcTemplate.queryForRowSet("SELECT * " +
                 "FROM USERS AS u " +
                 "WHERE ID = ?", id);
@@ -104,7 +107,7 @@ public class UserDbStorage implements UserStorage {
                     userRows.getString("login"),
                     userRows.getString("name"),
                     userRows.getDate("birthday").toLocalDate(),
-                    getFriendIds(id));
+                    allFriends.get(id));
             return user;
         } else {
             return null;
@@ -172,15 +175,23 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public List<User> getFriends(int id) {
-        return jdbcTemplate.query("SELECT * " +
-                "FROM USERS u " +
-                "WHERE ID IN (SELECT FRIEND_ID " +
-                "FROM USER_FRIENDS uf " +
-                "WHERE USER_ID  = ?)", (rs, rowNum) -> makeUser(rs), id);
+        List<User> userFriends = new LinkedList<>();
+        Set<Integer> friendIds = getFriendIds().get(id);
+        if (friendIds != null) {
+            for (Integer friendId: friendIds) {
+                User user= getUserById(friendId);
+                userFriends.add(user);
+            }
+            return userFriends;
+        } else {
+            return new LinkedList<>();
+        }
+
     }
 
     @Override
     public Collection<User> commonFriends(int id, int otherId) {
+        Map<Integer, Set<Integer>> allFriends = getFriendIds();
         return jdbcTemplate.query("SELECT * FROM USERS u " +
                 "WHERE ID IN (SELECT FRIEND_ID as ID " +
                 "FROM USER_FRIENDS uf " +
@@ -188,6 +199,6 @@ public class UserDbStorage implements UserStorage {
                 "INTERSECT " +
                 "SELECT FRIEND_ID " +
                 "FROM USER_FRIENDS uf " +
-                "WHERE USER_ID  = ?)", (rs, rowNum) -> makeUser(rs), id, otherId);
+                "WHERE USER_ID  = ?)", (rs, rowNum) -> makeUser(rs, allFriends), id, otherId);
     }
 }

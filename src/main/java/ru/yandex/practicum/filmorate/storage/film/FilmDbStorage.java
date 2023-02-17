@@ -52,7 +52,6 @@ public class FilmDbStorage implements FilmStorage {
             }
         }, keyHolder);
         film.setId(keyHolder.getKey().intValue());
-
         updateGenres(film);
         log.debug("Film добавлен в базу, текущее количество фильмов");
         return film;
@@ -61,10 +60,6 @@ public class FilmDbStorage implements FilmStorage {
     private Collection<Genre> updateGenres(Film film) {
         String sql = "DELETE FROM PUBLIC.FILM_GENRES WHERE FILM_ID = ?";
         jdbcTemplate.update(sql, film.getId());
-
-        //Любой другой вариант, если в Film использовать Set<Genre> вызовет потерю порядка значений, остается только
-        //переупаковывать Collection в Set для удаление дублией. Это нужно не для добавления в таблицу, а для
-        //возвращения списка Genre
         Set<Genre> genres = new LinkedHashSet<>();
         if (film.getGenres() != null) {
             genres = new LinkedHashSet<>(film.getGenres());
@@ -83,8 +78,8 @@ public class FilmDbStorage implements FilmStorage {
         String sqlQuery = "UPDATE PUBLIC.FILMS " +
                 "SET NAME= ?, DESCRIPTION= ?, RELEASE_DATE= ?, DURATION= ?, RATING= ? " +
                 "WHERE ID= ?";
-        int updateStatus = jdbcTemplate.update(sqlQuery, film.getName(), film.getDescription(), film.getReleaseDate(), film.getDuration(),
-                film.getMpa().getId(), id);
+        int updateStatus = jdbcTemplate.update(sqlQuery, film.getName(), film.getDescription(), film.getReleaseDate(),
+                film.getDuration(), film.getMpa().getId(), id);
         if (updateStatus != 0) {
             film.setGenres(updateGenres(film));
             return film;
@@ -95,21 +90,25 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public Collection<Film> getFilms() {
+        Map<Integer, Set<Genre>> allGenres = getFilmGenres();
         String sqlQuery = "SELECT f.ID, f.NAME, f.DESCRIPTION, f.RELEASE_DATE, f.DURATION, m.ID AS mpa_id, " +
                 "m.NAME AS mpa_name " +
                 "FROM FILMS AS f " +
                 "LEFT JOIN mpa AS m ON m.ID = f.RATING";
-        return jdbcTemplate.query(sqlQuery, (rs, rowNum) -> makeFilm(rs));
+        return jdbcTemplate.query(sqlQuery, (rs, rowNum) -> makeFilm(rs, allGenres));
     }
 
-    private Film makeFilm(ResultSet rs) throws SQLException {
+    private Film makeFilm(ResultSet rs, Map<Integer, Set<Genre>> allGenres) throws SQLException {
         int id = rs.getInt("id");
         String name = rs.getString("name");
         String description = rs.getString("description");
         LocalDate releaseDate = rs.getDate("release_date").toLocalDate();
-        Integer duration = rs.getInt("duration");
+        int duration = rs.getInt("duration");
         MPA mpa = new MPA(rs.getInt("mpa_id"), rs.getString("mpa_name"));
-        Set<Genre> genres = getFilmGenresById(id);
+        Set<Genre> genres = new LinkedHashSet<>();
+        if (allGenres.get(id) != null) {
+            genres = allGenres.get(id);
+        }
         return new Film(id, name, description, releaseDate, duration, genres, mpa, getFilmLikes(id));
     }
 
@@ -123,32 +122,28 @@ public class FilmDbStorage implements FilmStorage {
         return whoLikedUserIds;
     }
 
-    private Set<Genre> getFilmGenresById(int id) {
-        SqlRowSet filmRows = jdbcTemplate.queryForRowSet("SELECT * " +
-                "FROM FILMS AS f " +
-                "WHERE f.id = ?", id);
+    private Map<Integer, Set<Genre>> getFilmGenres() {
+        Map<Integer, Set<Genre>> allGenres = new LinkedHashMap<>();
+        SqlRowSet rs = jdbcTemplate.queryForRowSet("SELECT fg.FILM_ID, fg.GENRE_ID, g.NAME " +
+                "FROM FILM_GENRES fg " +
+                "LEFT JOIN GENRES g ON fg.GENRE_ID = g.ID ");
 
-        if (filmRows.next()) {
-            SqlRowSet filmGenreRows = jdbcTemplate.queryForRowSet(
-                    "SELECT ID, NAME FROM GENRES g " +
-                            "WHERE ID IN (SELECT GENRE_ID " +
-                            "FROM FILM_GENRES g " +
-                            "WHERE FILM_ID = ?)", id);
-            Set<Genre> genres = new LinkedHashSet<>();
-            while (filmGenreRows.next()) {
-                Genre genre = new Genre(filmGenreRows.getInt(1), filmGenreRows.getString(2));
-                if (!genres.contains(genre)) {
-                    genres.add(genre);
-                }
+            while (rs.next()) {
+                Integer filmId = rs.getInt(1);
+                allGenres.putIfAbsent(filmId, new LinkedHashSet<>());
+                Genre genre = new Genre(rs.getInt(2), rs.getString(3));
+                allGenres.get(filmId).add(genre);
             }
-            return genres;
-        } else {
-            return null;
-        }
+            return allGenres;
     }
 
     @Override
     public Film getFilmById(int id) {
+        Set<Genre> genres = new LinkedHashSet<>();
+        if (getFilmGenres().get(id) != null) {
+            genres = getFilmGenres().get(id);
+        }
+                getFilmGenres().get(id);
         SqlRowSet filmRows = jdbcTemplate.queryForRowSet("SELECT f.ID, f.NAME, f.DESCRIPTION, f.RELEASE_DATE, " +
                 "f.DURATION, m.ID, m.NAME " +
                 "FROM FILMS AS f " +
@@ -160,7 +155,7 @@ public class FilmDbStorage implements FilmStorage {
                     filmRows.getString("description"),
                     filmRows.getDate("release_date").toLocalDate(),
                     filmRows.getInt("duration"),
-                    getFilmGenresById(id),
+                    genres,
                     new MPA(filmRows.getInt(6), filmRows.getString(7)),
                     getFilmLikes(id));
             return film;
@@ -195,6 +190,7 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public Collection<Film> getPopularFilms(int count) {
+        Map<Integer, Set<Genre>> allGenres = getFilmGenres();
         return jdbcTemplate.query("SELECT F.ID, f.NAME, f.DESCRIPTION, f.RELEASE_DATE, f.DURATION, m.ID AS mpa_id, " +
                 "m.NAME AS mpa_name " +
                 "FROM FILMS f " +
@@ -202,7 +198,7 @@ public class FilmDbStorage implements FilmStorage {
                 "LEFT JOIN mpa AS m ON m.ID = f.RATING " +
                 "GROUP BY F.ID " +
                 "ORDER BY COUNT (user_id) DESC " +
-                "LIMIT ?", (rs, rowNum) -> makeFilm(rs), count);
+                "LIMIT ?", (rs, rowNum) -> makeFilm(rs, allGenres), count);
     }
 
     @Override
