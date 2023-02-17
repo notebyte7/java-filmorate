@@ -77,7 +77,10 @@ public class UserDbStorage implements UserStorage {
         String login = rs.getString("login");
         String name = rs.getString("name");
         LocalDate birthday = rs.getDate("birthday").toLocalDate();
-        Set<Integer> friendIds = allFriends.get(id);
+        Set<Integer> friendIds = new LinkedHashSet<>();
+        if (allFriends.get(id) != null) {
+            friendIds = allFriends.get(id);
+        }
         return new User(id, email, login, name, birthday, friendIds);
     }
 
@@ -96,7 +99,10 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public User getUserById(int id) {
-        Map<Integer, Set<Integer>> allFriends = getFriendIds();
+        Set<Integer> friendIds = new LinkedHashSet<>();
+        if (getFriendIds().get(id) != null) {
+            friendIds = getFriendIds().get(id);
+        }
         SqlRowSet userRows = jdbcTemplate.queryForRowSet("SELECT * " +
                 "FROM USERS AS u " +
                 "WHERE ID = ?", id);
@@ -107,7 +113,7 @@ public class UserDbStorage implements UserStorage {
                     userRows.getString("login"),
                     userRows.getString("name"),
                     userRows.getDate("birthday").toLocalDate(),
-                    allFriends.get(id));
+                    friendIds);
             return user;
         } else {
             return null;
