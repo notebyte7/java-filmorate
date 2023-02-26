@@ -2,12 +2,15 @@ package ru.yandex.practicum.filmorate.storage.film;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import ru.yandex.practicum.filmorate.exception.FilmNotFoundException;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.Genre;
+import ru.yandex.practicum.filmorate.model.MPA;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -33,7 +36,7 @@ public class InMemoryFilmStorage implements FilmStorage {
             log.debug("Film успешно обновлен, текущее количество фильмов: {}", films.size());
         } else {
             log.debug("Фильм для обновления не найден");
-            throw new FilmNotFoundException("Фильм для обновления не найден");
+            throw new NotFoundException("Фильм для обновления не найден");
         }
         return film;
     }
@@ -48,8 +51,53 @@ public class InMemoryFilmStorage implements FilmStorage {
         if (films.containsKey(id)) {
             return films.get(id);
         } else {
-            throw new FilmNotFoundException("Фильм с " + id + " не найден");
+            throw new NotFoundException("Фильм с " + id + " не найден");
         }
+    }
+
+    @Override
+    public void addLike(int id, int userId) {
+        Film film = getFilmById(id);
+        film.getWhoLikedUserIds().add(userId);
+        update(film);
+    }
+
+    @Override
+    public void removeLike(int id, int userId) {
+        Film film = getFilmById(id);
+        film.getWhoLikedUserIds().remove(userId);
+        update(film);
+    }
+
+    @Override
+    public Collection<Film> getPopularFilms(int count) {
+        return getFilms().stream().sorted(this::compare)
+                .limit(count)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public Collection<Genre> getGenres() {
+        return null;
+    }
+
+    @Override
+    public Collection<MPA> getMpa() {
+        return null;
+    }
+
+    @Override
+    public MPA getMpaById(int id) {
+        return null;
+    }
+
+    @Override
+    public Genre getGenreById(int id) {
+        return null;
+    }
+
+    private int compare(Film f1, Film f2) {
+        return f2.getWhoLikedUserIds().size() - f1.getWhoLikedUserIds().size();
     }
 
     private int generateId() {

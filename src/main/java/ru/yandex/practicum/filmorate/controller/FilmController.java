@@ -3,6 +3,8 @@ package ru.yandex.practicum.filmorate.controller;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.Genre;
+import ru.yandex.practicum.filmorate.model.MPA;
 import ru.yandex.practicum.filmorate.service.FilmService;
 
 import javax.validation.Valid;
@@ -57,6 +59,30 @@ public class FilmController {
     public Collection<Film> popularFilms(@RequestParam(required = false, defaultValue = "10") Integer count) {
         log.debug("Получен запрос GET /films/popular - список популярных фильмов с параметром count");
         return filmService.getPopularFilms(count);
+    }
+
+    @GetMapping(value = "/genres")
+    public Collection<Genre> getGenres() {
+        log.debug("Получен запрос GET /genres - получить все Genre");
+        return filmService.getGenres();
+    }
+
+    @GetMapping(value = "/genres/{id}")
+    public Genre getGenreById(@PathVariable int id) {
+        log.debug("Получен запрос GET /genres/{id} - получить Genre по id");
+        return filmService.getGenreById(id);
+    }
+
+    @GetMapping(value = "/mpa")
+    public Collection<MPA> getMpa() {
+        log.debug("Получен запрос GET /mpa - получить все MPA");
+        return filmService.getMpa();
+    }
+
+    @GetMapping(value = "/mpa/{id}")
+    public MPA getMpaById(@PathVariable int id) {
+        log.debug("Получен запрос GET /mpa/{id} - получить MPA по id");
+        return filmService.getMpaById(id);
     }
 
 }

@@ -5,7 +5,8 @@ import ru.yandex.practicum.filmorate.validation.ReleaseDateValidation;
 
 import javax.validation.constraints.*;
 import java.time.LocalDate;
-import java.util.HashSet;
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 @Data
@@ -20,5 +21,19 @@ public class Film {
     private final LocalDate releaseDate;
     @Positive(message = "Продолжительность фильма должна быть положительной")
     private final int duration;
-    private Set<Integer> whoLikedUserIds = new HashSet<>();
+    private LinkedHashSet<Genre> genres;
+    private MPA mpa;
+    private Set<Integer> whoLikedUserIds;
+
+    public Film(int id, String name, String description, LocalDate releaseDate, int duration, LinkedHashSet<Genre> genres,
+                MPA mpa, Set<Integer> whoLikedUserIds) {
+        this.id = id;
+        this.name = name;
+        this.description = description;
+        this.releaseDate = releaseDate;
+        this.duration = duration;
+        this.genres = genres;
+        this.mpa = mpa;
+        this.whoLikedUserIds = whoLikedUserIds;
+    }
 }
