@@ -97,11 +97,22 @@ public class UserDbStorage implements UserStorage {
         return allFriends;
     }
 
+    private Set<Integer> getFriendIdsById(int id) {
+        Set<Integer> friendIds = new LinkedHashSet<>();
+        SqlRowSet rs = jdbcTemplate.queryForRowSet("SELECT FRIEND_ID " +
+                "FROM USER_FRIENDS uf " +
+                "WHERE USER_ID = ?", id);
+        while (rs.next()) {
+            friendIds.add(rs.getInt(1));
+        }
+        return friendIds;
+    }
+
     @Override
     public User getUserById(int id) {
         Set<Integer> friendIds = new LinkedHashSet<>();
         if (getFriendIds().get(id) != null) {
-            friendIds = getFriendIds().get(id);
+            friendIds = getFriendIdsById(id);
         }
         SqlRowSet userRows = jdbcTemplate.queryForRowSet("SELECT * " +
                 "FROM USERS AS u " +
@@ -182,7 +193,7 @@ public class UserDbStorage implements UserStorage {
     @Override
     public List<User> getFriends(int id) {
         List<User> userFriends = new LinkedList<>();
-        Set<Integer> friendIds = getFriendIds().get(id);
+        Set<Integer> friendIds = getFriendIdsById(id);
         if (friendIds != null) {
             for (Integer friendId: friendIds) {
                 User user= getUserById(friendId);

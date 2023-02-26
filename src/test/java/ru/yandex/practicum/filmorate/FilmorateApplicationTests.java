@@ -37,7 +37,7 @@ class FilmoRateApplicationTests {
     private final User user3 = new User(3, "email3@mail.ru", "login3", "name3",
             LocalDate.of(2022, 01, 01), friendIds);
 
-    private final Collection<Genre> genres = new HashSet<>();
+    private final LinkedHashSet<Genre> genres = new LinkedHashSet<>();
     private final MPA mpa = new MPA(1, "G");
     private Set<Integer> whoLikedUserIds = new HashSet();
     private final Film film0 = new Film(1, "name1", "description1",

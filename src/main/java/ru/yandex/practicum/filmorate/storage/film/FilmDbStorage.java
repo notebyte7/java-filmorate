@@ -57,15 +57,12 @@ public class FilmDbStorage implements FilmStorage {
         return film;
     }
 
-    private Collection<Genre> updateGenres(Film film) {
+    private LinkedHashSet<Genre> updateGenres(Film film) {
         String sql = "DELETE FROM PUBLIC.FILM_GENRES WHERE FILM_ID = ?";
         jdbcTemplate.update(sql, film.getId());
-        Set<Genre> genres = new LinkedHashSet<>();
+        LinkedHashSet<Genre> genres = new LinkedHashSet<>();
         if (film.getGenres() != null) {
             genres = new LinkedHashSet<>(film.getGenres());
-            //Любой другой вариант, если в Film использовать Set вызовет потерю порядка значений,
-            // остается только переупаковывать Collection в Set для удаление дублией.
-            // Это нужно не для добавления в таблицу, а для возвращения списка Genre
             for (Genre genre : genres) {
                 String sqlQuery = "INSERT INTO PUBLIC.FILM_GENRES " +
                         "(FILM_ID, GENRE_ID) " +
@@ -93,7 +90,7 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public Collection<Film> getFilms() {
-        Map<Integer, Set<Genre>> allGenres = getFilmGenres();
+        Map<Integer, LinkedHashSet<Genre>> allGenres = getFilmGenres();
         String sqlQuery = "SELECT f.ID, f.NAME, f.DESCRIPTION, f.RELEASE_DATE, f.DURATION, m.ID AS mpa_id, " +
                 "m.NAME AS mpa_name " +
                 "FROM FILMS AS f " +
@@ -101,35 +98,37 @@ public class FilmDbStorage implements FilmStorage {
         return jdbcTemplate.query(sqlQuery, (rs, rowNum) -> makeFilm(rs, allGenres));
     }
 
-    private Film makeFilm(ResultSet rs, Map<Integer, Set<Genre>> allGenres) throws SQLException {
+    private Film makeFilm(ResultSet rs, Map<Integer, LinkedHashSet<Genre>> allGenres) throws SQLException {
         int id = rs.getInt("id");
         String name = rs.getString("name");
         String description = rs.getString("description");
         LocalDate releaseDate = rs.getDate("release_date").toLocalDate();
         int duration = rs.getInt("duration");
         MPA mpa = new MPA(rs.getInt("mpa_id"), rs.getString("mpa_name"));
-        Set<Genre> genres = new LinkedHashSet<>();
-        if (allGenres.get(id) != null) {
-            genres = allGenres.get(id);
-        }
-        return new Film(id, name, description, releaseDate, duration, genres, mpa, getFilmLikes(id));
+        LinkedHashSet<Genre> genres = allGenres.getOrDefault(id, new LinkedHashSet<>());
+        Set<Integer> likes = getFilmLikes().getOrDefault(id, new LinkedHashSet<>());
+        return new Film(id, name, description, releaseDate, duration, genres, mpa, likes);
     }
 
-    private Set<Integer> getFilmLikes(int id) {
-        Set<Integer> whoLikedUserIds = new HashSet<>();
-        SqlRowSet likesRow = jdbcTemplate.queryForRowSet("SELECT USER_ID FROM FILM_LIKES fl " +
-                "WHERE FILM_ID  = ?", id);
-        while (likesRow.next()) {
-            whoLikedUserIds.add(likesRow.getInt(1));
+    private Map<Integer, Set<Integer>> getFilmLikes() {
+        Map<Integer, Set<Integer>> allLikes = new LinkedHashMap<>();
+        SqlRowSet rs = jdbcTemplate.queryForRowSet("SELECT FILM_ID, USER_ID FROM FILM_LIKES fl");
+        while (rs.next()) {
+            Integer filmId = rs.getInt(1);
+            allLikes.putIfAbsent(filmId, new LinkedHashSet<>());
+            Integer userId = rs.getInt(2);
+            allLikes.get(filmId).add(userId);
         }
-        return whoLikedUserIds;
+        return allLikes;
     }
 
-    private Map<Integer, Set<Genre>> getFilmGenres() {
-        Map<Integer, Set<Genre>> allGenres = new LinkedHashMap<>();
+
+    private Map<Integer, LinkedHashSet<Genre>> getFilmGenres() {
+        Map<Integer, LinkedHashSet<Genre>> allGenres = new LinkedHashMap<>();
         SqlRowSet rs = jdbcTemplate.queryForRowSet("SELECT fg.FILM_ID, fg.GENRE_ID, g.NAME " +
                 "FROM FILM_GENRES fg " +
-                "LEFT JOIN GENRES g ON fg.GENRE_ID = g.ID ");
+                "LEFT JOIN GENRES g ON fg.GENRE_ID = g.ID " +
+                "ORDER BY fg.FILM_ID, fg.GENRE_ID desc");
 
             while (rs.next()) {
                 Integer filmId = rs.getInt(1);
@@ -140,13 +139,27 @@ public class FilmDbStorage implements FilmStorage {
             return allGenres;
     }
 
+    private LinkedHashSet<Genre> getFilmGenresById(int id) {
+        LinkedHashSet<Genre> genres = new LinkedHashSet<>();
+        SqlRowSet rs = jdbcTemplate.queryForRowSet("SELECT fg.GENRE_ID, g.NAME " +
+                "FROM FILM_GENRES fg " +
+                "LEFT JOIN GENRES g ON fg.GENRE_ID = g.ID " +
+                "WHERE fg.FILM_ID = ?" +
+                "ORDER BY fg.FILM_ID, fg.GENRE_ID asc", id);
+
+        while (rs.next()) {
+            genres.add(new Genre(
+                    rs.getInt(1),
+                    rs.getString(2)
+            ));
+        }
+        return genres;
+    }
+
     @Override
     public Film getFilmById(int id) {
-        Set<Genre> genres = new LinkedHashSet<>();
-        if (getFilmGenres().get(id) != null) {
-            genres = getFilmGenres().get(id);
-        }
-                getFilmGenres().get(id);
+        LinkedHashSet<Genre> genres = getFilmGenresById(id);
+        Set<Integer> likes = getFilmLikes().getOrDefault(id, new LinkedHashSet<>());
         SqlRowSet filmRows = jdbcTemplate.queryForRowSet("SELECT f.ID, f.NAME, f.DESCRIPTION, f.RELEASE_DATE, " +
                 "f.DURATION, m.ID, m.NAME " +
                 "FROM FILMS AS f " +
@@ -160,7 +173,7 @@ public class FilmDbStorage implements FilmStorage {
                     filmRows.getInt("duration"),
                     genres,
                     new MPA(filmRows.getInt(6), filmRows.getString(7)),
-                    getFilmLikes(id));
+                    likes);
             return film;
         } else {
             return null;
@@ -193,7 +206,7 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public Collection<Film> getPopularFilms(int count) {
-        Map<Integer, Set<Genre>> allGenres = getFilmGenres();
+        Map<Integer, LinkedHashSet<Genre>> allGenres = getFilmGenres();
         return jdbcTemplate.query("SELECT F.ID, f.NAME, f.DESCRIPTION, f.RELEASE_DATE, f.DURATION, m.ID AS mpa_id, " +
                 "m.NAME AS mpa_name " +
                 "FROM FILMS f " +

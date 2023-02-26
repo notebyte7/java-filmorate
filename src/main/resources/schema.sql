@@ -84,6 +84,8 @@ create table if not exists USER_FRIENDS
     USER_ID      INTEGER not null,
     FRIEND_ID    INTEGER not null,
     CONFIRMATION BOOLEAN,
+    constraint "USER_LIKES_pk"
+        primary key (USER_ID, FRIEND_ID),
     constraint "user_friends_USERS_ID_fk"
         foreign key (USER_ID) references USERS,
     constraint "user_friends_FRIENDS_ID_fk"
